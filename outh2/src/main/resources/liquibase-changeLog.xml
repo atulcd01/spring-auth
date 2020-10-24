@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd
+    http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+	<changeSet author="admin" id="1">
+		<createTable tableName="oauth_client_details">
+			<column name="client_id" type="VARCHAR(255)">
+				<constraints primaryKey="true" />
+			</column>
+			<column name="resource_ids" type="VARCHAR(255)" />
+			<column name="client_secret" type="VARCHAR(255)" />
+			<column name="scope" type="VARCHAR(255)" />
+			<column name="authorized_grant_types" type="VARCHAR(255)" />
+			<column name="web_server_redirect_uri" type="VARCHAR(255)" />
+			<column name="authorities" type="VARCHAR(255)" />
+			<column name="access_token_validity" type="VARCHAR(255)" />
+			<column name="refresh_token_validity" type="VARCHAR(255)" />
+			<column name="additional_information" type="VARCHAR(4096)" />
+			<column name="autoapprove" type="VARCHAR(255)" />
+		</createTable>
+		<rollback>
+			<dropTable tableName="oauth_client_details" />
+		</rollback>
+	</changeSet>
+	
+	<changeSet author="admin" id="2">
+		<insert tableName="oauth_client_details">
+			<column name="client_id" value="clientapp" />
+			<column name="resource_ids" value="oauth2-resource" />
+			<column name="client_secret"
+				value="$2a$10$F2dXfNuFjqezxIZp0ad5OeegW43cRdSiPgEtcetHspiNrUCi3iI6O" />
+			<column name="scope" value="read_profile_info" />
+			<column name="authorized_grant_types" value="password,authorization_code,refresh_token" />
+			<column name="web_server_redirect_uri" value="http://localhost" />
+			<column name="authorities" value="READ_ONLY_CLIENT" />
+			<column name="access_token_validity" value="5000" />
+			<column name="refresh_token_validity" value="50000" />
+			<column name="autoapprove" value="true" />
+		</insert>
+	</changeSet>
+
+	<changeSet author="admin" id="3">
+		<createTable tableName="users">
+			<column name="id" type="INTEGER">
+					<constraints primaryKey="true" />
+			</column>
+			<column name="username" type="VARCHAR(255)">
+				<constraints unique="true" />
+			</column>
+			<column name="password" type="VARCHAR(255)" />
+			<column name="firstname" type="VARCHAR(255)" />
+			<column name="lastname" type="VARCHAR(255)" />
+			<column name="email" type="VARCHAR(255)" />
+			<column name="phone" type="VARCHAR(255)" />
+			<column name="enabled" type="boolean" />
+		</createTable>
+		<rollback>
+			<dropTable tableName="users" />
+		</rollback>
+	</changeSet>
+	<changeSet author="admin" id="4">
+			
+		<createTable tableName="authorities">
+		
+			<column name="id" type="INTEGER">
+						<constraints primaryKey="true" />
+			</column>
+			<column name="username" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+			<column name="authority" type="VARCHAR(255)">
+				<constraints nullable="false"/>
+			</column>
+		</createTable>
+		<addForeignKeyConstraint constraintName="fk_authorities_users"
+		    baseTableName="authorities" baseColumnNames="username"
+		    referencedTableName="users" referencedColumnNames="username"
+		    onDelete="CASCADE" onUpdate="CASCADE"/>
+		<createIndex indexName="ix_auth_username " tableName="authorities">
+		    <column name="username"/>
+		    <column name="authority"/>
+		  </createIndex>
+		<rollback>
+			<dropTable tableName="authorities" />
+		</rollback>
+	</changeSet>
+	
+	<changeSet author="admin" id="5">
+		<preConditions onFail="MARK_RAN" onFailMessage=":">
+			<not>
+				<tableExists tableName="pk_generator"/>
+			</not>
+		</preConditions>
+        <createTable tableName="pk_generator">
+            <column name="seq_name" type="NVARCHAR2(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="seq_value" type="NUMBER(38, 0)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    
+    <changeSet author="admin" id="6">
+		<preConditions onFail="MARK_RAN" onFailMessage=":"> 
+			<sqlCheck expectedResult="0">SELECT count(*) FROM pk_generator WHERE seq_name = 'USER.id';</sqlCheck> 
+		</preConditions>
+		<insert tableName="pk_generator">
+			<column name="seq_name" value="USER.id"></column>
+			<column name="seq_value" valueComputed="(SELECT COALESCE(aa.seq, 0) + 1 FROM (SELECT MAX(ID) seq FROM users a) aa)"/>
+		</insert>
+		<insert tableName="pk_generator">
+			<column name="seq_name" value="AUTHORITIES.id"></column>
+			<column name="seq_value" valueComputed="(SELECT COALESCE(aa.seq, 0) + 1 FROM (SELECT MAX(ID) seq FROM authorities a) aa)"/>
+		</insert>
+	</changeSet>
+	
+	<changeSet author="admin" id="7">
+		<insert tableName="users">
+			<column name="id" value="1" />
+			<column name="username" value="admin" />
+			<column name="password" value="$2a$10$mqXc0VpCYV6cbi4SixrMt.P.vtBgdATOyO/WxqoSFNtDoozqpOTqe" />
+			<column name="firstname" value="Default" />
+			<column name="lastname" value="Administrator" />
+			<column name="email" value="a@a.com" />
+			<column name="enabled" value="true" />
+		</insert>
+		<update tableName="pk_generator">
+    		<column name="seq_value" valueComputed="(SELECT COALESCE(aa.seq, 0) + 1 FROM (SELECT MAX(id) seq FROM users a) aa)"></column>
+    		<where>seq_name='USER.id'</where>
+    	</update>
+		
+		<insert tableName="authorities">
+			<column name="id" value="1" />
+			<column name="username" value="admin" />
+			<column name="authority" value="ADMIN" />
+		</insert>
+		
+		<update tableName="pk_generator">
+    		<column name="seq_value" valueComputed="(SELECT COALESCE(aa.seq, 0) + 1 FROM (SELECT MAX(id) seq FROM authorities a) aa)"></column>
+    		<where>seq_name='AUTHORITIES.id'</where>
+    	</update>
+	</changeSet>
+	
+	
+	<!-- create table groups (
+    id bigint generated by default as identity(start with 0) primary key,
+    group_name varchar_ignorecase(50) not null
+);
+
+create table group_authorities (
+    group_id bigint not null,
+    authority varchar(50) not null,
+    constraint fk_group_authorities_group foreign key(group_id) references groups(id)
+);
+
+create table group_members (
+    id bigint generated by default as identity(start with 0) primary key,
+    username varchar(50) not null,
+    group_id bigint not null,
+    constraint fk_group_members_group foreign key(group_id) references groups(id)
+);
+select g.id, g.group_name, ga.authority from groups g, group_members gm, group_authorities ga where gm.username = ? and g.id = ga.group_id and g.id = gm.group_id
+
+
+ -->
+	
+</databaseChangeLog>
